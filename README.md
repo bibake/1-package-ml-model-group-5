@@ -5,6 +5,7 @@
 To install the library:
 
 ```
+$ # pip install ie_bike_model  # If I ever upload this to PyPI, which I won't
 $ pip install .
 ```
 
