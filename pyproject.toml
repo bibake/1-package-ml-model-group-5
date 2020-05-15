@@ -1,7 +1,8 @@
 [build-system]
 requires = [
 	    "flit_core >=2,<4",
-	    "pandas"	
+	    # "pandas",
+			# "scikit-learn",
 	   ]
 build-backend = "flit_core.buildapi"
 
@@ -9,8 +10,10 @@ build-backend = "flit_core.buildapi"
 module = "ie_bike_model"
 author = "Group 5"
 author-email = "bibake@student.ie.edu"
+home-page = "https://github.com/IE-Advanced-Python/1-package-ml-model-group-5"
 
 [tool.flit.metadata.requires-extra]
 dev = [
-    "pytest"
+    "pytest",
+		"jupyter",
 ]
