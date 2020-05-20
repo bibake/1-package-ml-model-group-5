@@ -117,14 +117,17 @@ def check_and_retrieve(file=None, from_package=False, random_state=42):
 
     if file or from_package:
         path = [os.path.split(__file__)[0] + 'trained_model/model.pkl', file][bool(file)]
-        with open(path, 'rb') as f:
-            model = joblib.load(f)
-        if not f and file: print('Error: Could not load pkl object in the given path')
-        if not f and from_package: print('Error: Could not load pkl object from the package')
+        try:
+            with open(path, 'rb') as f:
+                model = joblib.load(f)
+        except:
+            print('Error: Could not load pkl object {}'.format(['from the package','in the given path'][bool(file)]))
     else:
-        with open(os.path.join(os.path.expanduser("~"),"model.pkl"),'rb') as f:
-            model = joblib.load(f)
-        if not f: model = train_and_persist()
+        try:
+            with open(os.path.join(os.path.expanduser("~"),"model.pkl"),'rb') as f:
+                model = joblib.load(f)
+        except:
+            model = train_and_persist()
         
     return model
 
