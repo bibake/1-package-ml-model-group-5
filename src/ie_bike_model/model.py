@@ -271,7 +271,7 @@ def process_new_observation(df):
     return df
 
 
-def predict(parameters, model_path=None, filename=None, retrain_model=False, random_state=42, compression_factor=3):
+def predict(parameters, model_path=None, filename=None, retrain_model=False, random_state=42, compression_factor=False):
     """
     1. Receives dictionary of input parameters
     2. Processes the input data
