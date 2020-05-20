@@ -174,7 +174,7 @@ def process_new_observation(df):
         df['season'] = get_season(df.dteday[0])
         df['yr'] = df.dteday[0].year - 2011
         df['weekday'] = df.dteday[0].isoweekday()
-        df['workingday'] = (1 if df.weekday[0] < 6 else 0)
+        df['workingday'] = (1 if df.weekday[0] < 6 else 0) # ABB: Shouldn't it be ...<5 else 0?
         df['temp'] = (df.temp - (-8)) / (39 - (-8))
         df['atemp'] = (df.atemp - (-16)) / (50 - (-16))
         df['hum'] = df.hum / 100
