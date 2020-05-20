@@ -5,15 +5,16 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 import re
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
+pd.options.mode.chained_assignment = None # ABB: Why is this needed?
 
-def train_and_persist(random_state=42, compression_factor=3):
+
+def load_process_training_data():
     """
-    Train a RandomForestRegressor model and persist it as a pkl object.
-    `random_state` enables the user to set their own seed for reproducibility purposes.
-    `compression_factor` sets the compression level when persisting the pkl object.
+    Receives pandas dataframe and performs necessary feature engineering
+    and transformation to prepare it for training.
     """
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.model_selection import GridSearchCV
 
     # # DATA PREP # #
     mod_dir, _ = os.path.split(__file__)
@@ -63,19 +64,18 @@ def train_and_persist(random_state=42, compression_factor=3):
     for col in int_hour:
         data[col] = data[col].astype("category")
 
-    if dummify:
-        data = pd.get_dummies(data)
+    # ABB: Removed the dummify if-clause
+    data = pd.get_dummies(data)
 
     return data
 
 
-def train_model(random_state=42, compression_factor=False):
+def train_and_persist(random_state=42, compression_factor=False):
     """
-    Trains Random Forest Regressor.
-    Save to ".pkl" file.
+    Train a RandomForestRegressor model and persist it as a pkl object.
+    `random_state` enables the user to set their own seed for reproducibility purposes.
+    `compression_factor` sets the compression level when persisting the pkl object.
     """
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.model_selection import GridSearchCV
 
     # load and process training data
     data = load_process_training_data()
@@ -83,7 +83,7 @@ def train_model(random_state=42, compression_factor=False):
     # # MODELING # #
     train = data.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
 
-    # seperate the independent and target variable on testing data
+    # separate the independent and target variable on testing data
     X_train = train.drop(columns=['cnt'], axis=1)
     y_train = train['cnt']
 
@@ -120,7 +120,7 @@ def train_model(random_state=42, compression_factor=False):
     return model
 
 
-def check_and_retrieve(file=None, from_package=False, random_state=42):
+def check_and_retrieve(file=None, from_package=False, random_state=42, compression_factor=False):
     """
     Check if a pretrained model is already stored as a pkl object in the specified path (`file`)
         If so, return `model`.
@@ -143,7 +143,7 @@ def check_and_retrieve(file=None, from_package=False, random_state=42):
             with open(os.path.join(os.path.expanduser("~"),"model.pkl"),'rb') as f:
                 model = joblib.load(f)
         except:
-            model = train_and_persist()
+            model = train_and_persist(random_state=random_state, compression_factor=compression_factor)
         
     return model
 
@@ -163,19 +163,7 @@ def get_season(date_to_convert):
             return i[0]
 
 
-def predict(parameters, file=None, from_package=False, random_state=42):
-    """
-    1. Receives dictionary of input parameters
-    2. Processes the input data
-    3. Passes the data onto the trained model
-    4. Returns the number of expected users
-    """
-
-    # load or train model
-    model = check_and_retrieve(file=file, from_package=from_package, random_state=random_state)
-
-    # # Process Parameters # #
-
+def process_new_observation(df):
     try:
         df['mnth'] = df.dteday[0].month
         df['hr'] = df.dteday[0].hour
@@ -253,7 +241,7 @@ def predict(parameters, file=None, from_package=False, random_state=42):
     return df
 
 
-def predict(parameters, model_path=None, filename=None, retrain_model=False, random_state=42, compression_factor=False):
+def predict(parameters, file=None, from_package=False, random_state=42, compression_factor=False):
     """
     1. Receives dictionary of input parameters
     2. Processes the input data
@@ -262,8 +250,7 @@ def predict(parameters, model_path=None, filename=None, retrain_model=False, ran
     """
 
     # load or train model
-    model = train_and_persist(model_path=model_path, filename=filename, retrain_model=retrain_model,
-                              random_state=random_state, compression_factor=compression_factor)
+    model = check_and_retrieve(file=file, from_package=from_package, random_state=random_state, compression_factor=compression_factor)
 
     # # Process Parameters # #
     try:
