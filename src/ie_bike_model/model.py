@@ -5,11 +5,10 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GridSearchCV
-
 
 def train_model(random_state=42):
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.model_selection import GridSearchCV
 
     # # DATA PREP # #
     mod_dir, _ = os.path.split(__file__)
