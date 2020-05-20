@@ -4,9 +4,14 @@ import os
 import pandas as pd
 import numpy as np
 import datetime as dt
+import re
 
-
-def train_model(random_state=42):
+def train_and_persist(random_state=42, compression_factor=3):
+    """
+    Train a RandomForestRegressor model and persist it as a pkl object.
+    `random_state` enables the user to set their own seed for reproducibility purposes.
+    `compression_factor` sets the compression level when persisting the pkl object.
+    """
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.model_selection import GridSearchCV
 
@@ -91,69 +96,36 @@ def train_model(random_state=42):
     #model.fit(X_train, y_train)
     model = gsc.best_estimator_
 
-    joblib.dump(model, "model.pkl", compress=3)
+    # ABB: Persisting as .pkl requires changing .gitignore (includes .pkl initially)
+    # ABB: As per the rubric, the pkl object needs to be saved in the user home directory
+    # ABB: Consider adding the destination path as argument with default the user home directory
+    pkl_path = os.path.join(os.path.expanduser("~"),"model.pkl") 
+    joblib.dump(model, pkl_path, compress=compression_factor)
 
     return model
 
 
-def train_and_persist(model_path=None, filename=None, retrain_model=False, random_state=42):
+def check_and_retrieve(file=None, from_package=False, random_state=42):
     """
-    Check if pretrained model exists.
-    If so, return model.
-    If not, train and save new RandomForestRegressor model.
+    Check if a pretrained model is already stored as a pkl object in the specified path (`file`)
+        If so, return `model`.
+        If not:
+            If `from_package` is True, retrieve the built-in pre-trained model.
+            If not, check if there is a pkl object in the user's home directory. 
+            Else, call `train_and_persist` to retrieve a newly trained model.
     """
 
-    if model_path:
-        try:
-            if filename:
-                try:
-                    model = joblib.load(model_path + filename)
-                except:
-                    print('fail_1')
-            else:
-                try:
-                    model = joblib.load(model_path + 'model.joblib')
-                except:
-                    pass
-                try:
-                    model = joblib.load(model_path)
-                except:
-                    pass
-
-        except Exception:
-            print('fail_2')
-
-    elif filename:
-        try:
-            model = joblib.load(filename)
-        except Exception:
-            print('fail_3')
-
+    if file or from_package:
+        path = [os.path.split(__file__)[0] + 'trained_model/model.pkl', file][bool(file)]
+        with open(path, 'rb') as f:
+            model = joblib.load(f)
+        if not f and file: print('Error: Could not load pkl object in the given path')
+        if not f and from_package: print('Error: Could not load pkl object from the package')
     else:
-        if glob.glob('model.joblib'):
-            try:
-                model = joblib.load('model.joblib')
-            except Exception:
-                print('fail_4')
-
-        elif retrain_model:  # Train and save new model
-            try:
-                model = train_model()
-            except Exception:
-                print('fail_5')
-
-        else:  # Load pretrained model from package
-            try:
-                mod_dir, _ = os.path.split(__file__)
-
-                MODEL_PATH = os.path.join(mod_dir + '/trained_model/model.joblib')
-
-                model = joblib.load(MODEL_PATH)
-
-                joblib.dump(model, "model.joblib", compress=3)
-            except Exception:
-                print('fail_6')
-
+        with open(os.path.join(os.path.expanduser("~"),"model.pkl",'rb') as f:
+            model = joblib.load(f)
+        if not f: model = train_and_persist()
+        
     return model
 
 
@@ -172,7 +144,7 @@ def get_season(date_to_convert):
             return i[0]
 
 
-def predict(parameters, model_path=None, filename=None, random_state=42):
+def predict(parameters, file=None, from_package=False, random_state=42):
     """
     1. Receives dictionary of input parameters
     2. Processes the input data
@@ -181,7 +153,7 @@ def predict(parameters, model_path=None, filename=None, random_state=42):
     """
 
     # load or train model
-    model = train_and_persist(model_path=model_path, filename=filename, random_state=random_state)
+    model = check_and_retrieve(file=file, from_package=from_package, random_state=random_state)
 
     # # Process Parameters # #
 
