@@ -117,38 +117,44 @@ def train_and_persist(model_path=None, filename=None, retrain_model=False, rando
 
     if model_path:
         try:
-            model = joblib.load(model_path + 'model.pkl')
-        try:
-            model = joblib.load(model_path)
-        if filename:
-            try:
-                model = joblib.load(model_path + filename)
+            if filename:
+                try:
+                    model = joblib.load(model_path + filename)
+                except:
+                    print('fail_1')
+            else:
+                try:
+                    model = joblib.load(model_path + 'model.pkl')
+                except:
+                    pass
+                try:
+                    model = joblib.load(model_path)
+                except:
+                    pass
+
         except Exception:
-            print('fail_1')
-            break
+            print('fail_2')
 
     elif filename:
         try:
             model = joblib.load(filename)
         except Exception:
-            print('fail_2')
-            break
+            print('fail_3')
 
     else:
         if glob.glob('model.pkl'):
             try:
                 model = joblib.load('model.pkl')
             except Exception:
-                print('fail_3')
-                break
+                print('fail_4')
 
         elif retrain_model:  # Train and save new model
             try:
                 model = train_model()
 
             except Exception:
-                print('fail_4')
-                break
+                print('fail_5')
+
         else:  # For pre-trained model included in package
             try:
                 mod_dir, _ = os.path.split(__file__)
@@ -156,6 +162,10 @@ def train_and_persist(model_path=None, filename=None, retrain_model=False, rando
                 MODEL_PATH = os.path.join(mod_dir + '/trained_model/model.pkl')
 
                 model = joblib.load(MODEL_PATH)
+
+                joblib.dump(model, "model.pkl")
+            except Exception:
+                print('fail_6')
 
     return model
 
@@ -197,7 +207,6 @@ def predict(parameters, model_path=None, filename=None, random_state=42):
         if list(df.columns) != ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']:
             print("ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
             ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
-            break
 
         # rename columns –– may be able to remove this step
         df.rename(columns={'date': 'dteday', 'temperature_C': 'temp',
@@ -207,7 +216,6 @@ def predict(parameters, model_path=None, filename=None, random_state=42):
         # ensure correct parameters syntax
         print("ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
         ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
-        break
 
     try:
         df['mnth'] = df.dteday[0].month
@@ -228,7 +236,10 @@ def predict(parameters, model_path=None, filename=None, random_state=42):
         df['casual'] = (df.casual if 'casual' in df else 0)
 
         # train = hour_train.drop(columns = ['dteday', 'casual','atemp', 'registered'])
+    except:
+        pass
     # processed_params
 
     # return prediction
-    return model.predict(np.array(processed_params).reshape(1, -1))
+    # return model.predict(np.array(processed_params).reshape(1, -1))
+    print('done')
