@@ -137,6 +137,10 @@ def check_and_retrieve(file=None, from_package=False, random_state=42, compressi
                 model = joblib.load(f)
         except:
             print('Error: Could not load pkl object {}'.format(['from the package','in the given path'][bool(file)]))
+            if file:
+                filename = re.split('[\\\/]',file)[-1]
+                print('{}'.format(['No pkl file included in the path',
+                                   'Check the path leading to the pkl file'][filename[-4:] == '.pkl']))
             return None
     else:
         try:
