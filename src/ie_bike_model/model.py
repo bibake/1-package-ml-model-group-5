@@ -6,7 +6,7 @@ import numpy as np
 import datetime as dt
 
 
-def train_model(random_state=42):
+def train_model(random_state=42, compression_factor=3):
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.model_selection import GridSearchCV
 
@@ -90,12 +90,12 @@ def train_model(random_state=42):
                                   random_state=random_state)
     model.fit(X_train, y_train)
 
-    joblib.dump(model, "model.joblib", compress=3)
+    joblib.dump(model, "model.joblib", compress=compression_factor)
 
     return model
 
 
-def train_and_persist(model_path=None, filename=None, retrain_model=False, random_state=42):
+def train_and_persist(model_path=None, filename=None, retrain_model=True, random_state=42, compression_factor=3):
     """
     Check if pretrained model exists.
     If so, return model.
@@ -137,7 +137,8 @@ def train_and_persist(model_path=None, filename=None, retrain_model=False, rando
 
         elif retrain_model:  # Train and save new model
             try:
-                model = train_model()
+                model = train_model(random_state=random_state,
+                                    compression_factor=compression_factor)
             except Exception:
                 print('fail_5')
 
@@ -149,7 +150,7 @@ def train_and_persist(model_path=None, filename=None, retrain_model=False, rando
 
                 model = joblib.load(MODEL_PATH)
 
-                joblib.dump(model, "model.joblib", compress=3)
+                joblib.dump(model, "model.joblib", compress=compression_factor)
             except Exception:
                 print('fail_6')
 
