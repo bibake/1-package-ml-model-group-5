@@ -22,8 +22,8 @@ def train_model(random_state=42):
     data['dteday'] = pd.to_datetime(data['dteday'])
 
     # resolving skewness
-    data["windspeed"] = np.log1p(data.windspeed)
-    data["cnt"] = np.sqrt(data.cnt)
+    data["windspeed"] = np.log1p(data["windspeed"])
+    data["cnt"] = np.sqrt(data["cnt"])
 
     # # FEATURE ENGINEERING # #
     # Rented during office hours
@@ -49,7 +49,7 @@ def train_model(random_state=42):
     data['temp_binned'] = pd.cut(data['temp'], bins).astype('category')
     data['hum_binned'] = pd.cut(data['hum'], bins).astype('category')
 
-    # Convert the data type to eithwe category or to float
+    # Convert the data type to category
     int_hour = ["season", "yr", "mnth", "hr", "holiday",
                 "weekday", "workingday", "weathersit",
                 "IsOfficeHour", "IsDaytime", "IsRushHourMorning",
@@ -69,7 +69,7 @@ def train_model(random_state=42):
 
     # grid search
     gsc = GridSearchCV(
-        estimator=RandomForestRegressor(),
+        estimator=RandomForestRegressor(random_state=random_state),
         param_grid={'max_depth': [10, 40],
                     'min_samples_leaf': [1, 2],
                     'min_samples_split': [2, 5],
@@ -82,15 +82,16 @@ def train_model(random_state=42):
 
     grid_result = gsc.fit(X_train, y_train)
 
-    model = RandomForestRegressor(max_depth=gsc.best_params_['max_depth'],
-                                  min_samples_leaf=gsc.best_params_['min_samples_leaf'],
-                                  min_samples_split=gsc.best_params_[
-                                      'min_samples_split'],
-                                  n_estimators=gsc.best_params_['n_estimators'],
-                                  random_state=random_state)
-    model.fit(X_train, y_train)
+    #model = RandomForestRegressor(max_depth=gsc.best_params_['max_depth'],
+    #                              min_samples_leaf=gsc.best_params_['min_samples_leaf'],
+    #                              min_samples_split=gsc.best_params_[
+    #                                  'min_samples_split'],
+    #                              n_estimators=gsc.best_params_['n_estimators'],
+    #                              random_state=random_state)
+    #model.fit(X_train, y_train)
+    model = gsc.best_estimator_
 
-    joblib.dump(model, "model.joblib", compress=3)
+    joblib.dump(model, "model.pkl", compress=3)
 
     return model
 
