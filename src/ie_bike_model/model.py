@@ -216,9 +216,9 @@ def process_new_observation(df):
         print('Binning error')
 
     try:
-        train_df = load_process_training_data(dummify=False)
+        train_df = load_process_training_data()
         train_df = train_df.drop(columns='cnt')
-        df = train_df.append(df, ignore_index=True)
+        df = train_df.append(df, ignore_index=True) # ABB: Why is the merging necessary?
 
     except:
         print("Data merging error")
