@@ -172,6 +172,7 @@ def train_and_persist(model_path=None, filename=None, retrain_model=False, rando
                 model = joblib.load(MODEL_PATH)
 
                 joblib.dump(model, "model.pkl", compress=compression_factor)
+
             except Exception:
                 print('fail_6')
 
