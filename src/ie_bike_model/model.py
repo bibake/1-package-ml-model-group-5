@@ -122,6 +122,7 @@ def check_and_retrieve(file=None, from_package=False, random_state=42):
                 model = joblib.load(f)
         except:
             print('Error: Could not load pkl object {}'.format(['from the package','in the given path'][bool(file)]))
+            return None
     else:
         try:
             with open(os.path.join(os.path.expanduser("~"),"model.pkl"),'rb') as f:
