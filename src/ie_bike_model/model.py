@@ -4,13 +4,14 @@ import os
 import pandas as pd
 import numpy as np
 import datetime as dt
+pd.options.mode.chained_assignment = None
 
 
-def train_model(random_state=42, compression_factor=3):
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.model_selection import GridSearchCV
-
-    # # DATA PREP # #
+def load_process_training_data(dummify=True):
+    """
+    Receives pandas dataframe and preforms necessary feature engineering
+    and transformation to prepare it for training.
+    """
     mod_dir, _ = os.path.split(__file__)
 
     DATA_PATH = os.path.join(mod_dir + '/data/bike_sharing')
@@ -47,9 +48,10 @@ def train_model(random_state=42, compression_factor=3):
     # binning temp, atemp, hum in 5 equally sized bins
     bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
     data['temp_binned'] = pd.cut(data['temp'], bins).astype('category')
+    data['atemp_binned'] = pd.cut(data['atemp'], bins).astype('category')
     data['hum_binned'] = pd.cut(data['hum'], bins).astype('category')
 
-    # Convert the data type to eithwe category or to float
+    # Convert the data type to either category or to float
     int_hour = ["season", "yr", "mnth", "hr", "holiday",
                 "weekday", "workingday", "weathersit",
                 "IsOfficeHour", "IsDaytime", "IsRushHourMorning",
@@ -57,11 +59,25 @@ def train_model(random_state=42, compression_factor=3):
     for col in int_hour:
         data[col] = data[col].astype("category")
 
-    # dummify
-    data = pd.get_dummies(data)
+    if dummify:
+        data = pd.get_dummies(data)
+
+    return data
+
+
+def train_model(random_state=42, compression_factor=False):
+    """
+    Trains Random Forest Regressor.
+    Save to ".pkl" file.
+    """
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.model_selection import GridSearchCV
+
+    # load and process training data
+    data = load_process_training_data()
 
     # # MODELING # #
-    train = data.drop(columns=['dteday', 'casual', 'atemp', 'registered'])
+    train = data.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
 
     # seperate the independent and target variable on testing data
     X_train = train.drop(columns=['cnt'], axis=1)
@@ -90,12 +106,12 @@ def train_model(random_state=42, compression_factor=3):
                                   random_state=random_state)
     model.fit(X_train, y_train)
 
-    joblib.dump(model, "model.joblib", compress=compression_factor)
+    joblib.dump(model, "model.pkl", compress=compression_factor)
 
     return model
 
 
-def train_and_persist(model_path=None, filename=None, retrain_model=True, random_state=42, compression_factor=3):
+def train_and_persist(model_path=None, filename=None, retrain_model=False, random_state=42, compression_factor=False):
     """
     Check if pretrained model exists.
     If so, return model.
@@ -104,14 +120,19 @@ def train_and_persist(model_path=None, filename=None, retrain_model=True, random
 
     if model_path:
         try:
-            if filename:
+            if filename and model_path.endswith('/'):
                 try:
                     model = joblib.load(model_path + filename)
                 except:
                     print('fail_1')
+            elif filename:
+                try:
+                    model = joblib.load(model_path + '/' + filename)
+                except:
+                    print('fail_1.2')
             else:
                 try:
-                    model = joblib.load(model_path + 'model.joblib')
+                    model = joblib.load(model_path + 'model.pkl')
                 except:
                     pass
                 try:
@@ -129,9 +150,9 @@ def train_and_persist(model_path=None, filename=None, retrain_model=True, random
             print('fail_3')
 
     else:
-        if glob.glob('model.joblib'):
+        if glob.glob('model.pkl'):
             try:
-                model = joblib.load('model.joblib')
+                model = joblib.load('model.pkl')
             except Exception:
                 print('fail_4')
 
@@ -150,7 +171,7 @@ def train_and_persist(model_path=None, filename=None, retrain_model=True, random
 
                 model = joblib.load(MODEL_PATH)
 
-                joblib.dump(model, "model.joblib", compress=compression_factor)
+                joblib.dump(model, "model.pkl", compress=compression_factor)
             except Exception:
                 print('fail_6')
 
@@ -172,45 +193,14 @@ def get_season(date_to_convert):
             return i[0]
 
 
-def predict(parameters, model_path=None, filename=None, random_state=42):
-    """
-    1. Receives dictionary of input parameters
-    2. Processes the input data
-    3. Passes the data onto the trained model
-    4. Returns the number of expected users
-    """
-
-    # load or train model
-    model = train_and_persist(model_path=model_path, filename=filename, random_state=random_state)
-
-    # # Process Parameters # #
-
+def process_new_observation(df):
     try:
-        # convert to pandas df
-        df = pd.DataFrame(parameters, index=[0])
-
-        # ensure correct key-value pairs
-        # IMPROVEMENT: Allow 'holiday', 'casual' and 'registered' to be optional keys.
-        if list(df.columns) != ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']:
-            print("ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
-            ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
-
-        # rename columns –– may be able to remove this step
-        df.rename(columns={'date': 'dteday', 'temperature_C': 'temp',
-                           'feeling_temperature_C': 'atemp', 'humidity': 'hum'}, inplace=True)
-
-    except Exception:
-        # ensure correct parameters syntax
-        print("ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
-        ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
-
-    try:  # Seperate into own function
         df['mnth'] = df.dteday[0].month
         df['hr'] = df.dteday[0].hour
         df['season'] = get_season(df.dteday[0])
         df['yr'] = df.dteday[0].year - 2011
-        df['weekday'] = df.dteday[0].weekday()
-        df['workingday'] = (1 if df.dteday[0].weekday() < 6 else 0)
+        df['weekday'] = df.dteday[0].isoweekday()
+        df['workingday'] = (1 if df.weekday[0] < 6 else 0)
         df['temp'] = (df.temp - (-8)) / (39 - (-8))
         df['atemp'] = (df.atemp - (-16)) / (50 - (-16))
         df['hum'] = df.hum / 100
@@ -229,27 +219,96 @@ def predict(parameters, model_path=None, filename=None, random_state=42):
         df['IsRushHourEvening'] = (1 if (df.hr[0] >= 15) and (
             df.hr[0] < 19) and (df.weekday[0] == 1) else 0)
         df['IsHighSeason'] = (1 if df.season[0] == 3 else 0)
+        df["windspeed"] = np.log1p(df.windspeed)
 
+    except:
+        print('Feature engineering error')
+
+    try:
+        df = df[['dteday', 'season', 'yr', 'mnth', 'hr', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'atemp', 'hum',
+                 'windspeed', 'casual', 'registered', 'IsOfficeHour', 'IsDaytime', 'IsRushHourMorning', 'IsRushHourEvening', 'IsHighSeason']]
+
+    except:
+        print('Column reordering error')
+
+    try:
+        # bin temp, atemp, hum
+        bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
+        df['temp_binned'] = pd.cut(df['temp'], bins).astype('category')
+        df['atemp_binned'] = pd.cut(df['atemp'], bins).astype('category')
+        df['hum_binned'] = pd.cut(df['hum'], bins).astype('category')
+
+    except:
+        print('Binning error')
+
+    try:
+        train_df = load_process_training_data(dummify=False)
+        train_df = train_df.drop(columns='cnt')
+        df = train_df.append(df, ignore_index=True)
+
+    except:
+        print("Data merging error")
+
+    try:
         int_hour = ["season", "yr", "mnth", "hr", "holiday",
                     "weekday", "workingday", "weathersit",
                     "IsOfficeHour", "IsDaytime", "IsRushHourMorning",
                     "IsRushHourEvening", "IsHighSeason"]
+
         for col in int_hour:
-            data[col] = data[col].astype("category")
+            df[col] = df[col].astype("category")
 
-        # # resolving skewness
-        # data["windspeed"] = np.log1p(data.windspeed)
-        # data["cnt"] = np.sqrt(data.cnt)
-
-        # # binning temp, atemp, hum in 5 equally sized bins
-        # bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
-        # data['temp_binned'] = pd.cut(data['temp'], bins).astype('category')
-        # data['hum_binned'] = pd.cut(data['hum'], bins).astype('category')
-
-        train = hour_train.drop(columns=['dteday', 'casual', 'atemp', 'registered'])
     except:
-        pass
-    # processed_params
+        print('Data type updating error')
 
-    # return prediction
-    return model.predict(np.array(processed_params).reshape(1, -1))
+    try:
+        df = pd.get_dummies(df)
+        df = df.iloc[-1:]
+
+    except:
+        print('Dummifying error')
+
+    return df
+
+
+def predict(parameters, model_path=None, filename=None, retrain_model=False, random_state=42, compression_factor=3):
+    """
+    1. Receives dictionary of input parameters
+    2. Processes the input data
+    3. Passes the data onto the trained model
+    4. Returns the number of expected users
+    """
+
+    # load or train model
+    model = train_and_persist(model_path=model_path, filename=filename, retrain_model=retrain_model,
+                              random_state=random_state, compression_factor=compression_factor)
+
+    # # Process Parameters # #
+    try:
+        # convert to pandas df
+        df = pd.DataFrame(parameters, index=[0])
+
+        # ensure correct key-value pairs
+        # IMPROVEMENT: Allow 'holiday', 'casual' and 'registered' to be optional keys.
+        if list(df.columns) != ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']:
+            print("ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
+            ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
+
+        df.rename(columns={'date': 'dteday', 'temperature_C': 'temp',
+                           'feeling_temperature_C': 'atemp', 'humidity': 'hum'}, inplace=True)
+
+    except Exception:
+        # ensure correct parameters syntax
+        print("ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
+        ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
+
+    try:
+        df = process_new_observation(df)
+        train = df.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
+    except:
+        print('Preprocessing error')
+
+    pred = model.predict(np.array(train).reshape(1, -1))
+
+    return pred[0]
+    print(pred[0])
