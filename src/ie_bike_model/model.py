@@ -285,3 +285,4 @@ def predict(parameters, file=None, from_package=False, random_state=42, compress
     pred = model.predict(np.array(train).reshape(1, -1))
 
     return pred[0]
+    
