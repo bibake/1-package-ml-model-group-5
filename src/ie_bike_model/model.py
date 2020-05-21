@@ -7,7 +7,7 @@ import datetime as dt
 import re
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
-pd.options.mode.chained_assignment = None # ABB: Why is this needed?
+pd.options.mode.chained_assignment = None 
 
 
 def load_process_training_data():
@@ -53,7 +53,7 @@ def load_process_training_data():
     # binning temp, atemp, hum in 5 equally sized bins
     bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
     data['temp_binned'] = pd.cut(data['temp'], bins).astype('category')
-    data['atemp_binned'] = pd.cut(data['atemp'], bins).astype('category')
+    # data['atemp_binned'] = pd.cut(data['atemp'], bins).astype('category')
     data['hum_binned'] = pd.cut(data['hum'], bins).astype('category')
 
     # Convert the data type to category
@@ -67,6 +67,8 @@ def load_process_training_data():
     # ABB: Removed the dummify if-clause
     # data = pd.get_dummies(data)
 
+    data = data.drop(columns=['dteday', 'atemp', 'casual', 'registered'])
+
     return data
 
 
@@ -78,10 +80,10 @@ def train_and_persist(random_state=42, compression_factor=False):
     """
 
     # load and process training data
-    data = pd.get_dummies(load_process_training_data())
+    train = pd.get_dummies(load_process_training_data())
 
     # # MODELING # #
-    train = data.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
+    # train = data.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
 
     # separate the independent and target variable on testing data
     X_train = train.drop(columns=['cnt'], axis=1)
@@ -173,19 +175,19 @@ def process_new_observation(df):
         df['mnth'] = df.dteday[0].month
         df['hr'] = df.dteday[0].hour
         df['season'] = get_season(df.dteday[0])
-        df['yr'] = df.dteday[0].year - 2011
-        df['weekday'] = df.dteday[0].isoweekday()
-        df['workingday'] = (1 if df.weekday[0] < 6 else 0) # ABB: Shouldn't it be ...<5 else 0?
-        df['temp'] = (df.temp - (-8)) / (39 - (-8))
-        df['atemp'] = (df.atemp - (-16)) / (50 - (-16))
+        df['yr'] = [0, 1][df.dteday[0].year % 2 == 0]      # ABB: Small hack to accommodate years beyond [2011, 2012]
+        df['weekday'] = df.dteday[0].weekday()             # ABB: Changed from isoweekday so days are 0..6 as per hours.csv
+        df['workingday'] = (1 if df.weekday[0] < 5 else 0) # ABB: Changed from ...<6 else 0
+        df['temp'] = df.temp / 41                          # ABB: Changed to comply with original Readme.txt
+        # df['atemp'] = (df.atemp - (-16)) / (50 - (-16))
         df['hum'] = df.hum / 100
         df['windspeed'] = df.windspeed / 67
         # replace '0' with result from holiday calendar
         df['holiday'] = (df.holiday if 'holiday' in df else 0)
         # '154' is mean for entire dataste. Could be more targetted.
-        df['registered'] = (df.registered if 'registered' in df else 154)
+        # df['registered'] = (df.registered if 'registered' in df else 154)
         # '36' is mean for entire dataste. Could be more targetted.
-        df['casual'] = (df.casual if 'casual' in df else 36)
+        # df['casual'] = (df.casual if 'casual' in df else 36)
         df['IsOfficeHour'] = (1 if (df.hr[0] >= 9) and (
             df.hr[0] < 17) and (df.weekday[0] == 1) else 0)
         df['IsDaytime'] = (1 if (df.hr[0] >= 6) and (df.hr[0] < 22) else 0)
@@ -200,17 +202,17 @@ def process_new_observation(df):
         print('Feature engineering error')
 
     try:
-        df = df[['dteday', 'season', 'yr', 'mnth', 'hr', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'atemp', 'hum',
-                 'windspeed', 'casual', 'registered', 'IsOfficeHour', 'IsDaytime', 'IsRushHourMorning', 'IsRushHourEvening', 'IsHighSeason']]
+        df = df[['season', 'yr', 'mnth', 'hr', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'hum',
+                 'windspeed', 'IsOfficeHour', 'IsDaytime', 'IsRushHourMorning', 'IsRushHourEvening', 'IsHighSeason']]
 
     except:
         print('Column reordering error')
 
     try:
-        # bin temp, atemp, hum
+        # bin temp, hum
         bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
         df['temp_binned'] = pd.cut(df['temp'], bins).astype('category')
-        df['atemp_binned'] = pd.cut(df['atemp'], bins).astype('category')
+        # df['atemp_binned'] = pd.cut(df['atemp'], bins).astype('category')
         df['hum_binned'] = pd.cut(df['hum'], bins).astype('category')
 
     except:
@@ -265,7 +267,7 @@ def predict(parameters, file=None, from_package=False, random_state=42, compress
         df = pd.DataFrame(parameters, index=[0])
 
         # ensure correct key-value pairs
-        # IMPROVEMENT: Allow 'holiday', 'casual' and 'registered' to be optional keys.
+        # IMPROVEMENT: Allow 'holiday' to be optional key.
         if list(df.columns) != ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']:
             print("ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
             ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
@@ -279,8 +281,8 @@ def predict(parameters, file=None, from_package=False, random_state=42, compress
         ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']")
 
     try:
-        df = process_new_observation(df)
-        train = df.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
+        train = process_new_observation(df)
+        # train = df.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
     except:
         print('Preprocessing error')
 
