@@ -257,6 +257,8 @@ def predict(parameters, file=None, from_package=False, random_state=42, compress
     # load or train model
     model = check_and_retrieve(file=file, from_package=from_package, random_state=random_state, compression_factor=compression_factor)
 
+    if not model: return None
+    
     # # Process Parameters # #
     try:
         # convert to pandas df
