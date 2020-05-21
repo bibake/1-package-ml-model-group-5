@@ -219,7 +219,7 @@ def process_new_observation(df):
     try:
         train_df = load_process_training_data()
         train_df = train_df.drop(columns='cnt')
-        df = train_df.append(df, ignore_index=True) # ABB: Why is the merging necessary?
+        df = train_df.append(df, ignore_index=True)
 
     except:
         print("Data merging error")
