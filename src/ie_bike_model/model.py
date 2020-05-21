@@ -175,8 +175,8 @@ def process_new_observation(df):
         df['mnth'] = df.dteday[0].month
         df['hr'] = df.dteday[0].hour
         df['season'] = get_season(df.dteday[0])
-        df['yr'] = df.dteday[0].year - 2011
-        df['weekday'] = df.dteday[0].isoweekday()
+        df['yr'] = [0, 1][df.dteday[0].year % 2 == 0]      # ABB: Small hack to accommodate years beyond [2011, 2012]
+        df['weekday'] = df.dteday[0].weekday()             # ABB: Changed from isoweekday so days are 0..6 as per hours.csv
         df['workingday'] = (1 if df.weekday[0] < 5 else 0) # ABB: Changed from ...<6 else 0
         df['temp'] = df.temp / 41                          # ABB: Changed to comply with original Readme.txt
         # df['atemp'] = (df.atemp - (-16)) / (50 - (-16))
@@ -202,7 +202,7 @@ def process_new_observation(df):
         print('Feature engineering error')
 
     try:
-        df = df[['dteday', 'season', 'yr', 'mnth', 'hr', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'hum',
+        df = df[['season', 'yr', 'mnth', 'hr', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'hum',
                  'windspeed', 'IsOfficeHour', 'IsDaytime', 'IsRushHourMorning', 'IsRushHourEvening', 'IsHighSeason']]
 
     except:
@@ -221,7 +221,6 @@ def process_new_observation(df):
     try:
         train_df = load_process_training_data()
         train_df = train_df.drop(columns='cnt')
-        df = df.drop(columns=['dteday', 'atemp'])
         df = train_df.append(df, ignore_index=True)
 
     except:
