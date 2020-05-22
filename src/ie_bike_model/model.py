@@ -80,6 +80,10 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
     `compression_factor` sets the compression level when persisting the pkl object.
     """
 
+    # Interrupt and return if the intended path for persisting is ill-defined
+    pkl_path = [os.path.join(os.path.expanduser("~"), "model.pkl"), persist][bool(persist)]
+    if not persist_check(pkl_path): return None
+
     # load and process training data
     train = pd.get_dummies(load_process_training_data())
 
@@ -104,9 +108,7 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
 
     model = gsc.best_estimator_
 
-    if not persist_check(persist): return None
-
-    pkl_path = [os.path.join(os.path.expanduser("~"), "model.pkl"), persist][bool(persist)]
+    # Dump the model as a pkl object
     joblib.dump(model, pkl_path, compress=compression_factor)
 
     return model
@@ -114,7 +116,7 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
 
 def exception_file_frompackage(file, path):
     print('Error: Could not load pkl object {}'.format(['from the package','from the given path'][bool(file)]))
-            print('path: {}'.format(path))
+    print('path: {}'.format(path))
     if file:
         # filename = re.split('[\\\/]',file)[-1]
         print('{}'.format(['No pkl file included in the path',
