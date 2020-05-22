@@ -15,5 +15,6 @@ home-page = "https://github.com/IE-Advanced-Python/1-package-ml-model-group-5"
 [tool.flit.metadata.requires-extra]
 dev = [
     "pytest",
-		"jupyter",
+    "jupyter",
+    "black"
 ]
