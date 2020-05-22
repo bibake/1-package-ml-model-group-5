@@ -1,8 +1,5 @@
 import model
 import pytest
-import joblib
-import glob
-import os
 import pandas as pd
 import numpy as np
 import datetime as dt
