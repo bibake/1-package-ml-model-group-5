@@ -85,6 +85,7 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
         return None
     if int(compression_factor) > 9:
         print('Invalid compression factor: {}'.format(compression_factor))
+        return None
 
     # load and process training data
     train = pd.get_dummies(load_process_training_data())
