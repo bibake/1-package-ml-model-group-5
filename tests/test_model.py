@@ -1,4 +1,4 @@
-import model
+from ie_bike_model import model
 import pytest
 import pandas as pd
 import numpy as np
