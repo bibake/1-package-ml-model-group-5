@@ -72,18 +72,16 @@ def load_process_training_data():
     return data
 
 
-def train_and_persist(random_state=42, compression_factor=False):
+def train_and_persist(persist=None, random_state=42, compression_factor=False):
     """
-    Train a RandomForestRegressor model and persist it as a pkl object.
+    Train a RandomForestRegressor model and persist it as a pkl object in the user's
+    home directory (default) or as per the path specified in `persist`.
     `random_state` enables the user to set their own seed for reproducibility purposes.
     `compression_factor` sets the compression level when persisting the pkl object.
     """
 
     # load and process training data
     train = pd.get_dummies(load_process_training_data())
-
-    # # MODELING # #
-    # train = data.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
 
     # separate the independent and target variable on testing data
     X_train = train.drop(columns=['cnt'], axis=1)
@@ -104,32 +102,49 @@ def train_and_persist(random_state=42, compression_factor=False):
 
     grid_result = gsc.fit(X_train, y_train)
 
-    #model = RandomForestRegressor(max_depth=gsc.best_params_['max_depth'],
-    #                              min_samples_leaf=gsc.best_params_['min_samples_leaf'],
-    #                              min_samples_split=gsc.best_params_[
-    #                                  'min_samples_split'],
-    #                              n_estimators=gsc.best_params_['n_estimators'],
-    #                              random_state=random_state)
-    #model.fit(X_train, y_train)
     model = gsc.best_estimator_
 
-    # ABB: Persisting as .pkl requires changing .gitignore (includes .pkl initially)
-    # ABB: As per the rubric, the pkl object needs to be saved in the user home directory
-    # ABB: Consider adding the destination path as argument with default the user home directory
-    pkl_path = os.path.join(os.path.expanduser("~"),"model.pkl") 
+    if not persist_check(persist): return None
+
+    pkl_path = [os.path.join(os.path.expanduser("~"), "model.pkl"), persist][bool(persist)]
     joblib.dump(model, pkl_path, compress=compression_factor)
 
     return model
 
 
-def check_and_retrieve(file=None, from_package=False, random_state=42, compression_factor=False):
+def exception_file_frompackage(file, path):
+    print('Error: Could not load pkl object {}'.format(['from the package','from the given path'][bool(file)]))
+            print('path: {}'.format(path))
+    if file:
+        # filename = re.split('[\\\/]',file)[-1]
+        print('{}'.format(['No pkl file included in the path',
+                           'Check the path leading to the pkl file'][file[-4:] == '.pkl']))
+    return None
+
+
+def persist_check(persist):
+    path = [persist, os.path.split(persist)[0]][persist[-4:] == '.pkl']
+    if not os.path.exists(path):
+        print('Error: The specified path for persisting does not exist')
+        print('path: {}'.format(path))
+
+    return os.path.exists(path)
+
+
+def check_and_retrieve(
+    file=None, persist=None, from_package=False, random_state=42, compression_factor=False
+):
     """
     Check if a pretrained model is already stored as a pkl object in the specified path (`file`)
         If so, return `model`.
         If not:
             If `from_package` is True, retrieve the built-in pre-trained model.
-            If not, check if there is a pkl object in the user's home directory. 
-            Else, call `train_and_persist` to retrieve a newly trained model.
+            If not, check the argument `persist`:
+                If not None, call `train_and_persist` to retrieve a newly trained model, persisted in `persist`.
+                If None, check if there is a model.pkl object in the user's home directory:
+                    If so, retrieve it.
+                    Else, call `train_and_persist` to retrieve a newly trained model, persisted in the user's
+                    home directory.
     """
 
     if file or from_package:
@@ -138,24 +153,26 @@ def check_and_retrieve(file=None, from_package=False, random_state=42, compressi
             with open(path, 'rb') as f:
                 model = joblib.load(f)
         except:
-            print('Error: Could not load pkl object {}'.format(['from the package','in the given path'][bool(file)]))
-            print('path: {}'.format(path))
-            if file:
-                filename = re.split('[\\\/]',file)[-1]
-                print('{}'.format(['No pkl file included in the path',
-                                   'Check the path leading to the pkl file'][filename[-4:] == '.pkl']))
+            return exception_file_frompackage(file, path)
+    elif persist:
+        if persist_check(persist):
+            model = train_and_persist(persist=persist, random_state=random_state, compression_factor=compression_factor)
+        else:
             return None
     else:
         try:
             with open(os.path.join(os.path.expanduser("~"),"model.pkl"),'rb') as f:
                 model = joblib.load(f)
         except:
-            model = train_and_persist(random_state=random_state, compression_factor=compression_factor)
+            model = train_and_persist(persist=persist, random_state=random_state, compression_factor=compression_factor)
         
     return model
 
 
 def get_season(date_to_convert):
+    """
+    Return the season associated to the year embedded in `date_to_convert`
+    """
     d_year = date_to_convert.year
     seasons = [
         (1, dt.date(d_year, 12, 21), dt.date(d_year, 12, 31)),
@@ -175,19 +192,16 @@ def process_new_observation(df):
         df['mnth'] = df.dteday[0].month
         df['hr'] = df.dteday[0].hour
         df['season'] = get_season(df.dteday[0])
-        df['yr'] = [0, 1][df.dteday[0].year % 2 == 0]      # ABB: Small hack to accommodate years beyond [2011, 2012]
-        df['weekday'] = df.dteday[0].weekday()             # ABB: Changed from isoweekday so days are 0..6 as per hours.csv
-        df['workingday'] = (1 if df.weekday[0] < 5 else 0) # ABB: Changed from ...<6 else 0
-        df['temp'] = df.temp / 41                          # ABB: Changed to comply with original Readme.txt
-        # df['atemp'] = (df.atemp - (-16)) / (50 - (-16))
+        df['yr'] = [0, 1][df.dteday[0].year % 2 == 0]      
+        df['weekday'] = df.dteday[0].weekday()             
+        df['workingday'] = (1 if df.weekday[0] < 5 else 0) 
+        df['temp'] = df.temp / 41                          
+        
         df['hum'] = df.hum / 100
         df['windspeed'] = df.windspeed / 67
-        # replace '0' with result from holiday calendar
+        
         df['holiday'] = (df.holiday if 'holiday' in df else 0)
-        # '154' is mean for entire dataste. Could be more targetted.
-        # df['registered'] = (df.registered if 'registered' in df else 154)
-        # '36' is mean for entire dataste. Could be more targetted.
-        # df['casual'] = (df.casual if 'casual' in df else 36)
+        
         df['IsOfficeHour'] = (1 if (df.hr[0] >= 9) and (
             df.hr[0] < 17) and (df.weekday[0] == 1) else 0)
         df['IsDaytime'] = (1 if (df.hr[0] >= 6) and (df.hr[0] < 22) else 0)
@@ -212,7 +226,6 @@ def process_new_observation(df):
         # bin temp, hum
         bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
         df['temp_binned'] = pd.cut(df['temp'], bins).astype('category')
-        # df['atemp_binned'] = pd.cut(df['atemp'], bins).astype('category')
         df['hum_binned'] = pd.cut(df['hum'], bins).astype('category')
 
     except:
@@ -248,16 +261,16 @@ def process_new_observation(df):
     return df
 
 
-def predict(parameters, file=None, from_package=False, random_state=42, compression_factor=False):
+def predict(parameters, file=None, persist=None, from_package=False, random_state=42, compression_factor=False):
     """
-    1. Receives dictionary of input parameters
-    2. Processes the input data
+    1. Receives a dictionary of input parameters
+    2. Processes the input data, transforming it into a DataFrame
     3. Passes the data onto the trained model
     4. Returns the number of expected users
     """
 
     # load or train model
-    model = check_and_retrieve(file=file, from_package=from_package, random_state=random_state, compression_factor=compression_factor)
+    model = check_and_retrieve(file=file, persist=persist, from_package=from_package, random_state=random_state, compression_factor=compression_factor)
 
     if not model: return None
     
