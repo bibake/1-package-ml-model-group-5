@@ -31,25 +31,24 @@ def load_process_training_data():
     data["windspeed"] = np.log1p(data["windspeed"])
     data["cnt"] = np.sqrt(data["cnt"])
 
-    # # FEATURE ENGINEERING # #
-    # # Rented during office hours
-    # data['IsOfficeHour'] = np.where((data['hr'] >= 9) & (
-    #     data['hr'] < 17) & (data['weekday'] == 1), 1, 0)
+    # FEATURE ENGINEERING # #
+    # Rented during office hours
+    data['IsOfficeHour'] = np.where((data['hr'] >= 9) & (
+        data['hr'] < 17) & (data['weekday'] == 1), 1, 0)
 
-    # # Rented during daytime
-    # data['IsDaytime'] = np.where((data['hr'] >= 6) & (data['hr'] < 22), 1, 0)
+    # Rented during daytime
+    data['IsDaytime'] = np.where((data['hr'] >= 6) & (data['hr'] < 22), 1, 0)
 
-    # # Rented during morning rush hour
-    # data['IsRushHourMorning'] = np.where((data['hr'] >= 6) & (
-    #     data['hr'] < 10) & (data['weekday'] == 1), 1, 0)
+    # Rented during morning rush hour
+    data['IsRushHourMorning'] = np.where((data['hr'] >= 6) & (
+        data['hr'] < 10) & (data['weekday'] == 1), 1, 0)
 
-    # # Rented during evening rush hour
-    # data['IsRushHourEvening'] = np.where((data['hr'] >= 15) & (
-    #     data['hr'] < 19) & (data['weekday'] == 1), 1, 0)
+    # Rented during evening rush hour
+    data['IsRushHourEvening'] = np.where((data['hr'] >= 15) & (
+        data['hr'] < 19) & (data['weekday'] == 1), 1, 0)
 
-    # # Rented during most busy season
-    # data['IsHighSeason'] = np.where((data['season'] == 3), 1, 0)
-    data = add_engineered_features(data)
+    # Rented during most busy season
+    data['IsHighSeason'] = np.where((data['season'] == 3), 1, 0)
 
     # binning temp, atemp, hum in 5 equally sized bins
     bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
@@ -119,7 +118,6 @@ def exception_file_frompackage(file, path):
     print('Error: Could not load pkl object {}'.format(['from the package','from the given path'][bool(file)]))
     print('path: {}'.format(path))
     if file:
-        # filename = re.split('[\\\/]',file)[-1]
         print('{}'.format(['No pkl file included in the path',
                            'Check the path leading to the pkl file'][file[-4:] == '.pkl']))
     return None
@@ -190,21 +188,6 @@ def get_season(date_to_convert):
             return i[0]
 
 
-def add_engineered_features(df):
-    """
-    Add engineered categorical features to the input DataFrame
-    """
-    df['IsOfficeHour'] = (1 if (df.hr >= 9) and (
-        df.hr < 17) and (df.weekday == 1) else 0)
-    df['IsDaytime'] = (1 if (df.hr >= 6) and (df.hr < 22) else 0)
-    df['IsRushHourMorning'] = (1 if (df.hr >= 6) and (
-        df.hr < 10) and (df.weekday == 1) else 0)
-    df['IsRushHourEvening'] = (1 if (df.hr >= 15) and (
-        df.hr < 19) and (df.weekday == 1) else 0)
-    df['IsHighSeason'] = (1 if df.season == 3 else 0)
-
-    return df
-
 def process_new_observation(df):
     try:
         df['mnth'] = df.dteday[0].month
@@ -221,15 +204,14 @@ def process_new_observation(df):
         
         df['holiday'] = (df.holiday if 'holiday' in df else 0)
         
-        # df['IsOfficeHour'] = (1 if (df.hr[0] >= 9) and (
-        #     df.hr[0] < 17) and (df.weekday[0] == 1) else 0)
-        # df['IsDaytime'] = (1 if (df.hr[0] >= 6) and (df.hr[0] < 22) else 0)
-        # df['IsRushHourMorning'] = (1 if (df.hr[0] >= 6) and (
-        #     df.hr[0] < 10) and (df.weekday[0] == 1) else 0)
-        # df['IsRushHourEvening'] = (1 if (df.hr[0] >= 15) and (
-        #     df.hr[0] < 19) and (df.weekday[0] == 1) else 0)
-        # df['IsHighSeason'] = (1 if df.season[0] == 3 else 0)
-        df = add_engineered_features(df)
+        df['IsOfficeHour'] = (1 if (df.hr[0] >= 9) and (
+            df.hr[0] < 17) and (df.weekday[0] == 1) else 0)
+        df['IsDaytime'] = (1 if (df.hr[0] >= 6) and (df.hr[0] < 22) else 0)
+        df['IsRushHourMorning'] = (1 if (df.hr[0] >= 6) and (
+            df.hr[0] < 10) and (df.weekday[0] == 1) else 0)
+        df['IsRushHourEvening'] = (1 if (df.hr[0] >= 15) and (
+            df.hr[0] < 19) and (df.weekday[0] == 1) else 0)
+        df['IsHighSeason'] = (1 if df.season[0] == 3 else 0)
 
     except:
         print('Feature engineering error')
@@ -314,7 +296,6 @@ def predict(parameters, file=None, persist=None, from_package=False, random_stat
 
     try:
         train = process_new_observation(df)
-        # train = df.drop(columns=['dteday', 'casual', 'atemp', 'registered', 'temp', 'hum'])
     except:
         print('Preprocessing error')
 
