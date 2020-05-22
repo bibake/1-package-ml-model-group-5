@@ -32,4 +32,4 @@ def test_predict(df,result):
         error_df=error_df.append(df)
     """
 
-error_df
+#error_df
