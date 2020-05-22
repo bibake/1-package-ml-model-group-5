@@ -198,35 +198,23 @@ def process_new_observation(df):
         df['IsHighSeason'] = (1 if df.season[0] == 3 else 0)
         df["windspeed"] = np.log1p(df.windspeed)
 
-    except:
-        print('Feature engineering error')
 
-    try:
         df = df[['season', 'yr', 'mnth', 'hr', 'holiday', 'weekday', 'workingday', 'weathersit', 'temp', 'hum',
                  'windspeed', 'IsOfficeHour', 'IsDaytime', 'IsRushHourMorning', 'IsRushHourEvening', 'IsHighSeason']]
 
-    except:
-        print('Column reordering error')
 
-    try:
         # bin temp, hum
         bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
         df['temp_binned'] = pd.cut(df['temp'], bins).astype('category')
         # df['atemp_binned'] = pd.cut(df['atemp'], bins).astype('category')
         df['hum_binned'] = pd.cut(df['hum'], bins).astype('category')
 
-    except:
-        print('Binning error')
 
-    try:
         train_df = load_process_training_data()
         train_df = train_df.drop(columns='cnt')
         df = train_df.append(df, ignore_index=True)
 
-    except:
-        print("Data merging error")
 
-    try:
         int_hour = ["season", "yr", "mnth", "hr", "holiday",
                     "weekday", "workingday", "weathersit",
                     "IsOfficeHour", "IsDaytime", "IsRushHourMorning",
@@ -235,15 +223,11 @@ def process_new_observation(df):
         for col in int_hour:
             df[col] = df[col].astype("category")
 
-    except:
-        print('Data type updating error')
 
-    try:
         df = pd.get_dummies(df)
         df = df.iloc[-1:]
 
-    except:
-        print('Dummifying error')
+
 
     return df
 
