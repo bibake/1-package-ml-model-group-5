@@ -1,4 +1,4 @@
-#import model
+import model
 import pytest
 import joblib
 import glob
