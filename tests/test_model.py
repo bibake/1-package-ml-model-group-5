@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import datetime as dt
-from sklearn.ensemble import RandomForestRegressor 
+from sklearn.ensemble import RandomForestRegressor
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def test_load_process_training_data():
 
 
 #train_and_persist pytest
-#parametrize iss tacked to allow for all possible combinations
+#parametrize is stacked to allow for all possible combinations
 @pytest.mark.parametrize('persist', ['/foo/bar/nowhere', None])
 @pytest.mark.parametrize('rand_state', [42])
 @pytest.mark.parametrize('comp_fact', [True, 1, 10])
@@ -64,5 +64,4 @@ def test_process_new_observation(df):
 #predict pytest
 @pytest.mark.parametrize('dict', [(input_dict)])
 def test_predict(dict):
-    assert  isinstance(model.predict(dict), int),"Does not produce Integer"
-    assert  isinstance(model.predict(dict), float),"Does not produce Float"
+    assert  isinstance(model.predict(dict), (int,float)),"Does not produce Number"
