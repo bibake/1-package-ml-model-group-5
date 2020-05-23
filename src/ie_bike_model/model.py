@@ -53,7 +53,6 @@ def load_process_training_data():
     # binning temp, atemp, hum in 5 equally sized bins
     bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
     data['temp_binned'] = pd.cut(data['temp'], bins).astype('category')
-    # data['atemp_binned'] = pd.cut(data['atemp'], bins).astype('category')
     data['hum_binned'] = pd.cut(data['hum'], bins).astype('category')
 
     # Convert the data type to category
@@ -63,9 +62,6 @@ def load_process_training_data():
                 "IsRushHourEvening", "IsHighSeason"]
     for col in int_hour:
         data[col] = data[col].astype("category")
-
-    # ABB: Removed the dummify if-clause
-    # data = pd.get_dummies(data)
 
     data = data.drop(columns=['dteday', 'atemp', 'casual', 'registered'])
 
@@ -80,9 +76,16 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
     `compression_factor` sets the compression level when persisting the pkl object.
     """
 
-    # Interrupt and return if the intended path for persisting is ill-defined
+    # Interrupt and return if the intended path for persisting is ill-defined or the compression factor is invalid
     pkl_path = [os.path.join(os.path.expanduser("~"), "model.pkl"), persist][bool(persist)]
-    if not persist_check(pkl_path): return None
+    path = [pkl_path, os.path.split(pkl_path)[0]][pkl_path[-4:] == '.pkl']
+    if not os.path.exists(path):
+        print('Error: The specified path for persisting does not exist')
+        print('path: {}'.format(path))
+        return None
+    if int(compression_factor) > 9:
+        print('Invalid compression factor: {}'.format(compression_factor))
+        return None
 
     # load and process training data
     train = pd.get_dummies(load_process_training_data())
@@ -114,22 +117,22 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
     return model
 
 
-def exception_file_frompackage(file, path):
-    print('Error: Could not load pkl object {}'.format(['from the package','from the given path'][bool(file)]))
-    print('path: {}'.format(path))
-    if file:
-        print('{}'.format(['No pkl file included in the path',
-                           'Check the path leading to the pkl file'][file[-4:] == '.pkl']))
-    return None
+# def exception_file_frompackage(file, path):
+#     print('Error: Could not load pkl object {}'.format(['from the package','from the given path'][bool(file)]))
+#     print('path: {}'.format(path))
+#     if file:
+#         print('{}'.format(['No pkl file included in the path',
+#                            'Check the path leading to the pkl file'][file[-4:] == '.pkl']))
+#     return None
 
 
-def persist_check(persist):
-    path = [persist, os.path.split(persist)[0]][persist[-4:] == '.pkl']
-    if not os.path.exists(path):
-        print('Error: The specified path for persisting does not exist')
-        print('path: {}'.format(path))
+# def persist_check(persist):
+#     path = [persist, os.path.split(persist)[0]][persist[-4:] == '.pkl']
+#     if not os.path.exists(path):
+#         print('Error: The specified path for persisting does not exist')
+#         print('path: {}'.format(path))
 
-    return os.path.exists(path)
+#     return os.path.exists(path)
 
 
 def check_and_retrieve(
@@ -154,12 +157,15 @@ def check_and_retrieve(
             with open(path, 'rb') as f:
                 model = joblib.load(f)
         except:
-            return exception_file_frompackage(file, path)
-    elif persist:
-        if persist_check(persist):
-            model = train_and_persist(persist=persist, random_state=random_state, compression_factor=compression_factor)
-        else:
+            print('Error: Could not load pkl object {}'.format(['from the package','from the given path'][bool(file)]))
+            print('path: {}'.format(path))
+            if file:
+                print('{}'.format(['No pkl file included in the path',
+                                   'Check the path leading to the pkl file'][file[-4:] == '.pkl']))
             return None
+            # return exception_file_frompackage(file, path)
+    elif persist:
+        model = train_and_persist(persist=persist, random_state=random_state, compression_factor=compression_factor)
     else:
         try:
             with open(os.path.join(os.path.expanduser("~"),"model.pkl"),'rb') as f:
