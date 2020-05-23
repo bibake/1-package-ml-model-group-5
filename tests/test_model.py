@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import datetime as dt
-# from sklearn.ensemble import RandomForestRegressor 
+from sklearn.ensemble import RandomForestRegressor 
 
 
 @pytest.fixture
@@ -27,16 +27,16 @@ def input_df():
 #load_process_training_data pytest
 #no need to parametrize as there is nothing passed to the function
 def test_load_process_training_data():
-    assert isinstance(model.process_training_data(), pd.DataFrame), "Returned object is not a DataFrame"
+    assert isinstance(model.load_process_training_data(), pd.DataFrame), "Returned object is not a DataFrame"
 
 
 #train_and_persist pytest
 #parametrize iss tacked to allow for all possible combinations
-@pytest.mark.parametrize('persist', [None, '/foo/bar/nowhere'])
+@pytest.mark.parametrize('persist', ['/foo/bar/nowhere', None])
 @pytest.mark.parametrize('rand_state', [42])
 @pytest.mark.parametrize('comp_fact', [True, 1, 10])
-def test_train_and_persist(rand_state,comp_fact):
-    assert isinstance(model.train_and_persist(persist, rand_state, comp_fact), (RandomForestRegressor, NoneType)), "Returned object is not a RandomForestRegressor or NoneType"
+def test_train_and_persist(persist, rand_state, comp_fact):
+    assert isinstance(model.train_and_persist(persist, rand_state, comp_fact), (RandomForestRegressor, type(None))), "Returned object is not a RandomForestRegressor or NoneType"
 
 
 #check_and_retrieve pytest
@@ -45,8 +45,8 @@ def test_train_and_persist(rand_state,comp_fact):
 @pytest.mark.parametrize('from_pack', [True, False])
 @pytest.mark.parametrize('rand_state', [42])
 @pytest.mark.parametrize('comp_fact', [True])
-def test_check_and_retrieve(file,from_pack,rand_state,comp_fact):
-    assert isinstance(model.check_and_retrieve(file, persist, from_pack, rand_state, comp_fact), (RandomForestRegressor, NoneType)),"Returned object is not a RandomForestRegressor or NoneType"
+def test_check_and_retrieve(file, persist, from_pack, rand_state, comp_fact):
+    assert isinstance(model.check_and_retrieve(file, persist, from_pack, rand_state, comp_fact), (RandomForestRegressor, type(None))),"Returned object is not a RandomForestRegressor or NoneType"
 
 
 #get_season pytest
