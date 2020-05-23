@@ -7,7 +7,7 @@ import datetime as dt
 import re
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
-pd.options.mode.chained_assignment = None 
+pd.options.mode.chained_assignment = None
 
 
 def load_process_training_data():
@@ -83,7 +83,8 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
         print('Error: The specified path for persisting does not exist')
         print('path: {}'.format(path))
         return None
-    if int(compression_factor) > 9:
+    if [type(compression_factor) is int and int(compression_factor) > 9,
+        type(compression_factor) is tuple and compression_factor[1]>9][isinstance(compression_factor,tuple)]:
         print('Invalid compression factor: {}'.format(compression_factor))
         return None
 
@@ -172,7 +173,7 @@ def check_and_retrieve(
                 model = joblib.load(f)
         except:
             model = train_and_persist(persist=persist, random_state=random_state, compression_factor=compression_factor)
-        
+
     return model
 
 
@@ -199,17 +200,17 @@ def process_new_observation(df):
         df['mnth'] = df.dteday[0].month
         df['hr'] = df.dteday[0].hour
         df['season'] = get_season(df.dteday[0])
-        df['yr'] = [0, 1][df.dteday[0].year % 2 == 0]      
-        df['weekday'] = df.dteday[0].weekday()             
-        df['workingday'] = (1 if df.weekday[0] < 5 else 0) 
-        df['temp'] = df.temp / 41                          
-        
+        df['yr'] = [0, 1][df.dteday[0].year % 2 == 0]
+        df['weekday'] = df.dteday[0].weekday()
+        df['workingday'] = (1 if df.weekday[0] < 5 else 0)
+        df['temp'] = df.temp / 41
+
         df['hum'] = df.hum / 100
         df['windspeed'] = df.windspeed / 67
         df['windspeed'] = np.log1p(df.windspeed)
-        
+
         df['holiday'] = (df.holiday if 'holiday' in df else 0)
-        
+
         df['IsOfficeHour'] = (1 if (df.hr[0] >= 9) and (
             df.hr[0] < 17) and (df.weekday[0] == 1) else 0)
         df['IsDaytime'] = (1 if (df.hr[0] >= 6) and (df.hr[0] < 22) else 0)
@@ -280,7 +281,7 @@ def predict(parameters, file=None, persist=None, from_package=False, random_stat
     model = check_and_retrieve(file=file, persist=persist, from_package=from_package, random_state=random_state, compression_factor=compression_factor)
 
     if not model: return None
-    
+
     # # Process Parameters # #
     try:
         # convert to pandas df
@@ -308,4 +309,3 @@ def predict(parameters, file=None, persist=None, from_package=False, random_stat
     pred = model.predict(np.array(train).reshape(1, -1))
 
     return pred[0] #ABB: Should we round the number to less decimals/closest integer?
-    
