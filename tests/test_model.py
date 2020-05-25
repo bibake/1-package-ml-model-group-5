@@ -61,7 +61,7 @@ def test_check_and_retrieve(file, persist, from_pack, rand_state, comp_fact):
 
 # get_season pytest
 @pytest.mark.parametrize(
-    "date", ["2011-01-01", "01-01-2011", "2011 January 1st", "1st Jan 2011"]
+    "date", [2011-01-01, 01-01-2011,2014-02-03, 08-02-2014]
 )
 def test_get_season(date):
     assert isinstance(model.get_season(date), int), "Failed for given Date"
