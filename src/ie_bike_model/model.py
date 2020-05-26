@@ -104,6 +104,7 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
         print("Invalid compression factor: {}".format(compression_factor))
         return None
 
+
     # Load and process training data
     train = pd.get_dummies(load_process_training_data())
 
@@ -302,12 +303,14 @@ def process_new_observation(df):
         "IsHighSeason",
     ]
 
+
     for col in int_hour:
         df[col] = df[col].astype("category")
 
     # Apply dummmification
     df = pd.get_dummies(df)
     df = df.iloc[-1:]
+
 
     # Return the processed DataFrame comprising the input observation
     return df
