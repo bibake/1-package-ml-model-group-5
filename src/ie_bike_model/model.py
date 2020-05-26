@@ -1,10 +1,8 @@
 import joblib
-import glob
 import os
 import pandas as pd
 import numpy as np
 import datetime as dt
-import re
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 
@@ -13,11 +11,11 @@ pd.options.mode.chained_assignment = None
 
 def load_process_training_data():
     """
-    Receives pandas dataframe and performs necessary feature engineering
-    and transformation to prepare it for training.
+    Retrieves the pandas DataFrame object from the package and performs necessary
+    feature engineering and transformation to prepare it for training.
     """
 
-    # # DATA PREP # #
+    # DATA PREP
     mod_dir, _ = os.path.split(__file__)
 
     DATA_PATH = os.path.join(mod_dir + "/data/bike_sharing")
@@ -27,7 +25,7 @@ def load_process_training_data():
     # Change dteday to date time
     data["dteday"] = pd.to_datetime(data["dteday"])
 
-    # resolving skewness
+    # Resolving skewness
     data["windspeed"] = np.log1p(data["windspeed"])
     data["cnt"] = np.sqrt(data["cnt"])
 
@@ -53,7 +51,7 @@ def load_process_training_data():
     # Rented during most busy season
     data["IsHighSeason"] = np.where((data["season"] == 3), 1, 0)
 
-    # binning temp, atemp, hum in 5 equally sized bins
+    # Binning temp, atemp, hum in 5 equally sized bins
     bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
     data["temp_binned"] = pd.cut(data["temp"], bins).astype("category")
     data["hum_binned"] = pd.cut(data["hum"], bins).astype("category")
@@ -106,14 +104,15 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
         print("Invalid compression factor: {}".format(compression_factor))
         return None
 
-    # load and process training data
+
+    # Load and process training data
     train = pd.get_dummies(load_process_training_data())
 
-    # separate the independent and target variable on testing data
+    # Separate the independent and target variable on testing data
     X_train = train.drop(columns=["cnt"], axis=1)
     y_train = train["cnt"]
 
-    # grid search
+    # Grid search
     gsc = GridSearchCV(
         estimator=RandomForestRegressor(random_state=random_state),
         param_grid={
@@ -130,30 +129,13 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
 
     grid_result = gsc.fit(X_train, y_train)
 
+    # Retrieve the best estimator from the grid search
     model = gsc.best_estimator_
 
     # Dump the model as a pkl object
     joblib.dump(model, pkl_path, compress=compression_factor)
 
     return model
-
-
-# def exception_file_frompackage(file, path):
-#     print('Error: Could not load pkl object {}'.format(['from the package','from the given path'][bool(file)]))
-#     print('path: {}'.format(path))
-#     if file:
-#         print('{}'.format(['No pkl file included in the path',
-#                            'Check the path leading to the pkl file'][file[-4:] == '.pkl']))
-#     return None
-
-
-# def persist_check(persist):
-#     path = [persist, os.path.split(persist)[0]][persist[-4:] == '.pkl']
-#     if not os.path.exists(path):
-#         print('Error: The specified path for persisting does not exist')
-#         print('path: {}'.format(path))
-
-#     return os.path.exists(path)
 
 
 def check_and_retrieve(
@@ -201,7 +183,6 @@ def check_and_retrieve(
                     )
                 )
             return None
-            # return exception_file_frompackage(file, path)
     elif persist:
         model = train_and_persist(
             persist=persist,
@@ -224,7 +205,7 @@ def check_and_retrieve(
 
 def get_season(date_to_convert):
     """
-    Return the season associated to the year embedded in `date_to_convert`
+    Return the season associated to the year embedded in the `date_to_convert` DateTime object
     """
     d_year = date_to_convert.year
     seasons = [
@@ -236,85 +217,46 @@ def get_season(date_to_convert):
     ]
 
     for i in seasons:
-        if date_to_convert >= i[1] and date_to_convert <= i[2]:
+        if date_to_convert.date() >= i[1] and date_to_convert.date() <= i[2]:
             return i[0]
 
 
 def process_new_observation(df):
-    try:
-        df["mnth"] = df.dteday[0].month
-        df["hr"] = df.dteday[0].hour
-        df["season"] = get_season(df.dteday[0])
-        df["yr"] = [0, 1][df.dteday[0].year % 2 == 0]
-        df["weekday"] = df.dteday[0].weekday()
-        df["workingday"] = 1 if df.weekday[0] < 5 else 0
-        df["temp"] = df.temp / 41
+    """
+    Process the input pandas DataFrame to comply with the format used to train the regressor 
+    """
+    # Return immediately if the `dteday` key does not have a datetime object as value
+    if not isinstance(df.dteday[0], dt.datetime): return None
 
-        df["hum"] = df.hum / 100
-        df["windspeed"] = df.windspeed / 67
-        df["windspeed"] = np.log1p(df.windspeed)
+    # Apply feature engineering
+    df["mnth"] = df.dteday[0].month
+    df["hr"] = df.dteday[0].hour
+    df["season"] = get_season(df.dteday[0])
+    df["yr"] = [0, 1][df.dteday[0].year % 2 == 0]
+    df["weekday"] = df.dteday[0].weekday()
+    df["workingday"] = 1 if df.weekday[0] < 5 else 0
+    df["temp"] = df.temp / 41
+    df["hum"] = df.hum / 100
+    df["windspeed"] = df.windspeed / 67
+    df["windspeed"] = np.log1p(df.windspeed)
+    # If the optional argument `holiday` is not provided by the user, set to 0
+    df["holiday"] = df.holiday if "holiday" in df else 0
 
-        df["holiday"] = df.holiday if "holiday" in df else 0
+    df["IsOfficeHour"] = (
+        1 if (df.hr[0] >= 9) and (df.hr[0] < 17) and (df.weekday[0] == 1) else 0
+    )
+    df["IsDaytime"] = 1 if (df.hr[0] >= 6) and (df.hr[0] < 22) else 0
+    df["IsRushHourMorning"] = (
+        1 if (df.hr[0] >= 6) and (df.hr[0] < 10) and (df.weekday[0] == 1) else 0
+    )
+    df["IsRushHourEvening"] = (
+        1 if (df.hr[0] >= 15) and (df.hr[0] < 19) and (df.weekday[0] == 1) else 0
+    )
+    df["IsHighSeason"] = 1 if df.season[0] == 3 else 0
 
-        df["IsOfficeHour"] = (
-            1 if (df.hr[0] >= 9) and (df.hr[0] < 17) and (df.weekday[0] == 1) else 0
-        )
-        df["IsDaytime"] = 1 if (df.hr[0] >= 6) and (df.hr[0] < 22) else 0
-        df["IsRushHourMorning"] = (
-            1 if (df.hr[0] >= 6) and (df.hr[0] < 10) and (df.weekday[0] == 1) else 0
-        )
-        df["IsRushHourEvening"] = (
-            1 if (df.hr[0] >= 15) and (df.hr[0] < 19) and (df.weekday[0] == 1) else 0
-        )
-        df["IsHighSeason"] = 1 if df.season[0] == 3 else 0
-
-    except:
-        print("Feature engineering error")
-
-    try:
-        df = df[
-            [
-                "season",
-                "yr",
-                "mnth",
-                "hr",
-                "holiday",
-                "weekday",
-                "workingday",
-                "weathersit",
-                "temp",
-                "hum",
-                "windspeed",
-                "IsOfficeHour",
-                "IsDaytime",
-                "IsRushHourMorning",
-                "IsRushHourEvening",
-                "IsHighSeason",
-            ]
-        ]
-
-    except:
-        print("Column reordering error")
-
-    try:
-        # bin temp, hum
-        bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
-        df["temp_binned"] = pd.cut(df["temp"], bins).astype("category")
-        df["hum_binned"] = pd.cut(df["hum"], bins).astype("category")
-
-    except:
-        print("Binning error")
-
-    try:
-        train_df = load_process_training_data()
-        train_df = train_df.drop(columns="cnt")
-        df = train_df.append(df, ignore_index=True)
-
-    except:
-        print("Data merging error")
-
-    try:
-        int_hour = [
+    # Filter and reorder columns
+    df = df[
+        [
             "season",
             "yr",
             "mnth",
@@ -323,26 +265,54 @@ def process_new_observation(df):
             "weekday",
             "workingday",
             "weathersit",
+            "temp",
+            "hum",
+            "windspeed",
             "IsOfficeHour",
             "IsDaytime",
             "IsRushHourMorning",
             "IsRushHourEvening",
             "IsHighSeason",
         ]
+    ]
 
-        for col in int_hour:
-            df[col] = df[col].astype("category")
+    # Apply binning
+    bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
+    df["temp_binned"] = pd.cut(df["temp"], bins).astype("category")
+    df["hum_binned"] = pd.cut(df["hum"], bins).astype("category")
 
-    except:
-        print("Data type updating error")
+    # Merge with teh training dataset to facilitate dummification
+    train_df = load_process_training_data()
+    train_df = train_df.drop(columns="cnt")
+    df = train_df.append(df, ignore_index=True)
 
-    try:
-        df = pd.get_dummies(df)
-        df = df.iloc[-1:]
+    # Cast variables appropriately
+    int_hour = [
+        "season",
+        "yr",
+        "mnth",
+        "hr",
+        "holiday",
+        "weekday",
+        "workingday",
+        "weathersit",
+        "IsOfficeHour",
+        "IsDaytime",
+        "IsRushHourMorning",
+        "IsRushHourEvening",
+        "IsHighSeason",
+    ]
 
-    except:
-        print("Dummifying error")
 
+    for col in int_hour:
+        df[col] = df[col].astype("category")
+
+    # Apply dummmification
+    df = pd.get_dummies(df)
+    df = df.iloc[-1:]
+
+
+    # Return the processed DataFrame comprising the input observation
     return df
 
 
@@ -355,13 +325,17 @@ def predict(
     compression_factor=False,
 ):
     """
-    1. Receives a dictionary of input parameters
-    2. Processes the input data, transforming it into a DataFrame
-    3. Passes the data onto the trained model
-    4. Returns the number of expected users
+    Pass the values stored in the `parameters` dictionary to the appropriate functions for processing
+    and retrieve the hourly bike rental rate from the trained regressor.
+    If specified, `file` indicates the path where the model (pkl object) is stored for retrieval.
+    `from_package` enables the user to directly retrieve the built-in pre-trained regressor.
+    If the regressor is meant to be trained and persisted locally, `persist` optionally indicates
+    the path for persisting the resulting `model.pkl` file.
+    `random_state` enables the user to set their own seed for reproducibility purposes.
+    `compression_factor` sets the compression level when persisting the pkl object.
     """
 
-    # load or train model
+    # Load or train model
     model = check_and_retrieve(
         file=file,
         persist=persist,
@@ -370,29 +344,33 @@ def predict(
         compression_factor=compression_factor,
     )
 
+    # Return immediately if any sanity check is not satisfied
     if not model:
         return None
 
-    # # Process Parameters # #
+    # Process `parameters` dictionary
     try:
-        # convert to pandas df
+        # Convert to pandas DataFrame
         df = pd.DataFrame(parameters, index=[0])
+        print("Conversion to DataFrame successful")
+        cols = ["date","weathersit","temperature_C","feeling_temperature_C","humidity","windspeed"]
 
-        # ensure correct key-value pairs
-        # IMPROVEMENT: Allow 'holiday' to be optional key.
-        if list(df.columns) != [
-            "date",
-            "weathersit",
-            "temperature_C",
-            "feeling_temperature_C",
-            "humidity",
-            "windspeed",
-        ]:
+        # Ensure correct keys
+        if set(df.columns) != set(cols) and set(df.columns) != set(cols + ["holiday"]):
             print(
-                "ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
-            ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']"
+                "Error: Please pass a dictionary object to the `parameters` argument with the following keys: \n\
+            ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed'[, 'holiday']]"
             )
-
+            return None
+        print("Correct keys in parameters dict")
+        if "holiday" in df.columns and not isinstance(df.holiday[0],np.int64):
+            print("ERROR: Optional key `holiday` must be a (binary) integer object")
+            return None
+        if "holiday" in df.columns and isinstance(df.holiday[0],np.int64) and str(df.holiday[0]) not in '10':
+            print("ERROR: Optional key `holiday` can only hold values 1 or 0")
+            return None
+        print("holiday exists and is 1 or 0")
+        # Rename columns conveniently
         df.rename(
             columns={
                 "date": "dteday",
@@ -404,17 +382,22 @@ def predict(
         )
 
     except Exception:
-        # ensure correct parameters syntax
+        # Ensure correct type
         print(
-            "ERROR: Please pass a dictionary to the 'parameters' argument with the following keys in the order presented here: \n\
-        ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed']"
+            "Error: Please pass a dictionary object to the `parameters` argument with the following keys: \n\
+        ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed'[, 'holiday']]"
         )
+        return None
+    print(type(df.dteday), type(df.dteday[0]))
+    # Process the DataFrame
+    df = process_new_observation(df)
 
-    try:
-        train = process_new_observation(df)
-    except:
-        print("Preprocessing error")
+    # Return if sanity check is not satisfied
+    if df is None:
+        print("Error: Please assign a datetime object to the `date` input key")
+        return None
+    
+    # Feed the processed observation to the regressor and retrieve prediction
+    pred = model.predict(np.array(df).reshape(1, -1))
 
-    pred = model.predict(np.array(train).reshape(1, -1))
-
-    return pred[0]  # ABB: Should we round the number to less decimals/closest integer?
+    return pred[0] 
