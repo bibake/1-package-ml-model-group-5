@@ -104,7 +104,6 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
         print("Invalid compression factor: {}".format(compression_factor))
         return None
 
-
     # Load and process training data
     train = pd.get_dummies(load_process_training_data())
 
@@ -226,7 +225,8 @@ def process_new_observation(df):
     Process the input pandas DataFrame to comply with the format used to train the regressor 
     """
     # Return immediately if the `dteday` key does not have a datetime object as value
-    if not isinstance(df.dteday[0], dt.datetime): return None
+    if not isinstance(df.dteday[0], dt.datetime):
+        return None
 
     # Apply feature engineering
     df["mnth"] = df.dteday[0].month
@@ -303,14 +303,12 @@ def process_new_observation(df):
         "IsHighSeason",
     ]
 
-
     for col in int_hour:
         df[col] = df[col].astype("category")
 
     # Apply dummmification
     df = pd.get_dummies(df)
     df = df.iloc[-1:]
-
 
     # Return the processed DataFrame comprising the input observation
     return df
@@ -352,8 +350,15 @@ def predict(
     try:
         # Convert to pandas DataFrame
         df = pd.DataFrame(parameters, index=[0])
-    
-        cols = ["date","weathersit","temperature_C","feeling_temperature_C","humidity","windspeed"]
+
+        cols = [
+            "date",
+            "weathersit",
+            "temperature_C",
+            "feeling_temperature_C",
+            "humidity",
+            "windspeed",
+        ]
 
         # Ensure correct keys
         if set(df.columns) != set(cols) and set(df.columns) != set(cols + ["holiday"]):
@@ -362,14 +367,18 @@ def predict(
             ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed'[, 'holiday']]"
             )
             return None
-       
-        if "holiday" in df.columns and not isinstance(df.holiday[0],np.int64):
+
+        if "holiday" in df.columns and not isinstance(df.holiday[0], np.int64):
             print("ERROR: Optional key `holiday` must be a (binary) integer object")
             return None
-        if "holiday" in df.columns and isinstance(df.holiday[0],np.int64) and str(df.holiday[0]) not in '10':
+        if (
+            "holiday" in df.columns
+            and isinstance(df.holiday[0], np.int64)
+            and str(df.holiday[0]) not in "10"
+        ):
             print("ERROR: Optional key `holiday` can only hold values 1 or 0")
             return None
-       
+
         # Rename columns conveniently
         df.rename(
             columns={
@@ -388,7 +397,7 @@ def predict(
         ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed'[, 'holiday']]"
         )
         return None
-  
+
     # Process the DataFrame
     df = process_new_observation(df)
 
@@ -396,8 +405,8 @@ def predict(
     if df is None:
         print("Error: Please assign a datetime object to the `date` input key")
         return None
-    
+
     # Feed the processed observation to the regressor and retrieve prediction
     pred = model.predict(np.array(df).reshape(1, -1))
 
-    return pred[0] 
+    return pred[0]
