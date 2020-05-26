@@ -352,7 +352,7 @@ def predict(
     try:
         # Convert to pandas DataFrame
         df = pd.DataFrame(parameters, index=[0])
-        print("Conversion to DataFrame successful")
+    
         cols = ["date","weathersit","temperature_C","feeling_temperature_C","humidity","windspeed"]
 
         # Ensure correct keys
@@ -362,14 +362,14 @@ def predict(
             ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed'[, 'holiday']]"
             )
             return None
-        print("Correct keys in parameters dict")
+       
         if "holiday" in df.columns and not isinstance(df.holiday[0],np.int64):
             print("ERROR: Optional key `holiday` must be a (binary) integer object")
             return None
         if "holiday" in df.columns and isinstance(df.holiday[0],np.int64) and str(df.holiday[0]) not in '10':
             print("ERROR: Optional key `holiday` can only hold values 1 or 0")
             return None
-        print("holiday exists and is 1 or 0")
+       
         # Rename columns conveniently
         df.rename(
             columns={
@@ -388,7 +388,7 @@ def predict(
         ['date', 'weathersit', 'temperature_C', 'feeling_temperature_C', 'humidity', 'windspeed'[, 'holiday']]"
         )
         return None
-    print(type(df.dteday), type(df.dteday[0]))
+  
     # Process the DataFrame
     df = process_new_observation(df)
 
