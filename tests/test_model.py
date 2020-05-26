@@ -6,9 +6,8 @@ import numpy as np
 import datetime as dt
 from sklearn.ensemble import RandomForestRegressor
 
-
-def input_dict():
-    dct = {
+# Sample dictionaries
+idct = {
         "date": dt.datetime(2011, 1, 1, 10, 0, 0),
         "weathersit": 1,
         "temperature_C": 15.58,
@@ -16,15 +15,8 @@ def input_dict():
         "humidity": 76.0,
         "windspeed": 16.9,
     }
-    return dct
 
-@pytest.fixture(name="input_dict")
-def input_dict_fixture():
-    return input_dict()
-    
-
-def wrong_dict():
-    wdct = {
+wdct = {
         "date": '2011-01-01',
         "weathersit": 1,
         "temperature_C": 15.58,
@@ -32,15 +24,8 @@ def wrong_dict():
         "humidity": 76.0,
         "windspeed": 16.9,
     }
-    return wdct
 
-@pytest.fixture(name="wrong_dict")
-def wrong_dict_fixture():
-    return wrong_dict()
-
-
-def holiday_dict():
-    hdct = {
+hdct = {
         "date": dt.datetime(2011, 1, 1, 10, 0, 0),
         "weathersit": 1,
         "temperature_C": 15.58,
@@ -49,76 +34,56 @@ def holiday_dict():
         "windspeed": 16.9,
         "holiday": 1,
     }
-    return hdct
 
-@pytest.fixture(name="holiday_dict")
-def holiday_dict_fixture():
-    return holiday_dict()
+# Sample dataframes
+idf = pd.DataFrame([{"dteday": dt.datetime(2011, 1, 1, 10, 0, 0),
+    "weathersit": 1,
+    "temp": 15.58,
+    "atemp": 19.695,
+    "hum": 76.0,
+    "windspeed": 16.9}])
 
-
-def input_df():
-    df = pd.DataFrame.from_dict({
-        "date": dt.datetime(2011, 1, 1, 10, 0, 0),
-        "weathersit": 1,
-        "temperature_C": 15.58,
-        "feeling_temperature_C": 19.695,
-        "humidity": 76.0,
-        "windspeed": 16.9,
-    })
-    return df
-
-@pytest.fixture(name="input_df")
-def input_df_fixture():
-    return input_df()
-
-
-def wrong_df():
-    wdf = pd.DataFrame.from_dict({
-        "date": '2011-01-01',
-        "weathersit": 1,
-        "temperature_C": 15.58,
-        "feeling_temperature_C": 19.695,
-        "humidity": 76.0,
-        "windspeed": 16.9,
-    })
-    return wdf
-
-@pytest.fixture(name="wrong_df")
-def wrong_df_fixture():
-    return wrong_df()
+wdf = pd.DataFrame([{"dteday": '2011-01-01',
+    "weathersit": 1,
+    "temp": 15.58,
+    "atemp": 19.695,
+    "hum": 76.0,
+    "windspeed": 16.9}])
 
 
 # load_process_training_data pytest
 # no need to parametrize as there is nothing passed to the function
 def test_load_process_training_data():
     assert isinstance(
-        model.load_process_training_data(), pd.DataFrame
-    ), "Returned object is not a DataFrame"
+        model.load_process_training_data(), pd.core.frame.DataFrame
+    ), "Returned object is not pd.core.frame.DataFrame"
 
 
 # train_and_persist pytest
-# parametrize is stacked to allow for all possible combinations
-@pytest.mark.parametrize("persist", ["/foo/bar/nowhere", None])
-@pytest.mark.parametrize("rand_state", [42])
-@pytest.mark.parametrize("comp_fact", [True, 10])
-def test_train_and_persist(persist, rand_state, comp_fact):
+@pytest.mark.parametrize("persist, rand_state, comp_fact, result_instance",
+    [("/foo/bar/nowhere", 42, True, type(None)),
+     (None, 42, True, RandomForestRegressor),
+     (None, 42, 10, type(None))])
+def test_train_and_persist(persist, rand_state, comp_fact, result_instance):
     assert isinstance(
         model.train_and_persist(persist, rand_state, comp_fact),
-        (RandomForestRegressor, type(None)),
-    ), "Returned object is not a RandomForestRegressor or NoneType"
+        result_instance,
+    ), "Returned object is not {}".format(result_instance)
 
 
 # check_and_retrieve pytest
-@pytest.mark.parametrize("file", [None, "/foo/bar/nowhere", "/foo/bar/any.pkl"])
-@pytest.mark.parametrize("persist", [None])
-@pytest.mark.parametrize("from_pack", [True, False])
-@pytest.mark.parametrize("rand_state", [42])
-@pytest.mark.parametrize("comp_fact", [True])
-def test_check_and_retrieve(file, persist, from_pack, rand_state, comp_fact):
+@pytest.mark.parametrize("file, persist, from_pack, rand_state, comp_fact, result_instance",
+    [(None, None, True, 42, True, RandomForestRegressor),
+     ("/foo/bar/nowhere", None, True, 42, True, type(None)),
+     ("/foo/bar/any.pkl", None, True, 42, True, type(None)),
+     (None, None, False, 42, True, RandomForestRegressor),
+     ("/foo/bar/nowhere", None, False, 42, True, type(None)),
+     ("/foo/bar/any.pkl", None, False, 42, True, type(None))])
+def test_check_and_retrieve(file, persist, from_pack, rand_state, comp_fact, result_instance):
     assert isinstance(
         model.check_and_retrieve(file, persist, from_pack, rand_state, comp_fact),
-        (RandomForestRegressor, type(None)),
-    ), "Returned object is not a RandomForestRegressor or NoneType"
+        result_instance,
+    ), "Returned object is not {}".format(result_instance)
 
 
 # get_season pytest
@@ -126,18 +91,18 @@ def test_check_and_retrieve(file, persist, from_pack, rand_state, comp_fact):
     "date", [dt.datetime(2011, 1, 1, 0, 0, 0)]
 )
 def test_get_season(date):
-    assert isinstance(model.get_season(date), int), "Returned object is not int or NoneType"
+    assert isinstance(model.get_season(date), int), "Returned object is not int"
 
 
 # process_new_observation pytest
-@pytest.mark.parametrize("df", [input_df_fixture, wrong_df_fixture])
-def test_process_new_observation(df):
+@pytest.mark.parametrize("df, result_instance", [(idf, pd.core.frame.DataFrame), (wdf, type(None))])
+def test_process_new_observation(df, result_instance):
     assert isinstance(
-        model.process_new_observation(df), (pd.Dataframe, type(None))
-    ), "Returned object is not DataFrame or NoneType"
+        model.process_new_observation(df), result_instance
+    ), "Returned object is not {}".format(result_instance)
 
 
 # predict pytest
-@pytest.mark.parametrize("dct", [input_dict_fixture, wrong_dict_fixture, holiday_dict_fixture])
-def test_predict(dct):
-    assert isinstance(model.predict(dct), (float, type(None))), "Returned object is not float or NoneType"
+@pytest.mark.parametrize("dct, result_instance", [(idct,float), (wdct,type(None)), (hdct, float)])
+def test_predict(dct, result_instance):
+    assert isinstance(model.predict(dct), result_instance), "Returned object is not {}".format(result_instance)
