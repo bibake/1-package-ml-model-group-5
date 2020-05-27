@@ -77,7 +77,7 @@ def test_load_process_training_data():
         ("/foo/bar/nowhere", 42, True, type(None)),
         (None, 42, True, RandomForestRegressor),
         (None, 42, 10, type(None)),
-        (None, 42, ('gzip', 10), type(None)),
+        (None, 42, ("gzip", 10), type(None)),
     ],
 )
 def test_train_and_persist(persist, rand_state, comp_fact, result_instance):
