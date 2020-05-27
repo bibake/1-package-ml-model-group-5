@@ -51,7 +51,7 @@ def load_process_training_data():
     # Rented during most busy season
     data["IsHighSeason"] = np.where((data["season"] == 3), 1, 0)
 
-    # Binning temp, atemp, hum in 5 equally sized bins
+    # Binning temp, hum in 5 equally sized bins
     bins = [0, 0.19, 0.49, 0.69, 0.89, 1]
     data["temp_binned"] = pd.cut(data["temp"], bins).astype("category")
     data["hum_binned"] = pd.cut(data["hum"], bins).astype("category")
@@ -107,7 +107,7 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
     # Load and process training data
     train = pd.get_dummies(load_process_training_data())
 
-    # Separate the independent and target variable on testing data
+    # Separate the independent and target variable on training data
     X_train = train.drop(columns=["cnt"], axis=1)
     y_train = train["cnt"]
 
@@ -132,6 +132,7 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
     model = gsc.best_estimator_
 
     # Dump the model as a pkl object
+    pkl_path = [os.path.join(pkl_path, "model.pkl"), pkl_path][pkl_path[-4:] == ".pkl"]
     joblib.dump(model, pkl_path, compress=compression_factor)
 
     return model
@@ -222,7 +223,7 @@ def get_season(date_to_convert):
 
 def process_new_observation(df):
     """
-    Process the input pandas DataFrame to comply with the format used to train the regressor 
+    Process the input pandas DataFrame to comply with the format used to train the regressor
     """
     # Return immediately if the `dteday` key does not have a datetime object as value
     if not isinstance(df.dteday[0], dt.datetime):
