@@ -282,7 +282,7 @@ def process_new_observation(df):
     df["temp_binned"] = pd.cut(df["temp"], bins).astype("category")
     df["hum_binned"] = pd.cut(df["hum"], bins).astype("category")
 
-    # Merge with teh training dataset to facilitate dummification
+    # Merge with the training dataset to facilitate dummification
     train_df = load_process_training_data()
     train_df = train_df.drop(columns="cnt")
     df = train_df.append(df, ignore_index=True)
