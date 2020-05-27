@@ -7,10 +7,11 @@ module = "ie_bike_model"
 author = "Group 5"
 author-email = "bibake@student.ie.edu"
 home-page = "https://github.com/IE-Advanced-Python/1-package-ml-model-group-5"
-#requires = [
-#            "pandas",
-#            "scikit-learn",
-#           ]
+requires = [
+            "joblib",
+            "pandas",
+            "scikit-learn",
+           ]
 
 [tool.flit.metadata.requires-extra]
 dev = [
