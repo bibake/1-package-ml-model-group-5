@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 
 pd.options.mode.chained_assignment = None
 
@@ -105,11 +105,12 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
         return None
 
     # Load and process training data
-    train = pd.get_dummies(load_process_training_data())
+    data = pd.get_dummies(load_process_training_data())
+    X = data.drop(columns=["cnt"], axis=1)
+    y = data["cnt"]
 
-    # Separate the independent and target variable on training data
-    X_train = train.drop(columns=["cnt"], axis=1)
-    y_train = train["cnt"]
+    # Train test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.33, ramdom_state=random_state)
 
     # Grid search
     gsc = GridSearchCV(
@@ -410,4 +411,4 @@ def predict(
     # Feed the processed observation to the regressor and retrieve prediction
     pred = model.predict(np.array(df).reshape(1, -1))
 
-    return pred[0]
+    return int(pred[0]**2)
