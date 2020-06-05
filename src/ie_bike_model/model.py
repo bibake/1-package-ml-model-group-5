@@ -111,7 +111,7 @@ def train_and_persist(persist=None, random_state=42, compression_factor=False):
 
     # Train test split
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.33, ramdom_state=random_state
+        X, y, test_size=0.33, random_state=random_state
     )
 
     # Grid search
